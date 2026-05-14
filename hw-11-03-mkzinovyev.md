@@ -258,56 +258,47 @@ curl -X GET 'localhost:9200/_cluster/health?pretty'
 
 ### Ответ задание 2. Kibana
 
-Kibana была запущена в Docker-контейнере и подключена к Elasticsearch.
+Так как Elasticsearch уже был запущен на предыдущем этапе, запустим Kibana:
 
-Запустим Kibana:
-
-```bash
-docker compose up -d kibana
-```
 <img width="1430" height="90" alt="image" src="https://github.com/user-attachments/assets/0a770508-babd-4697-8587-4ac2302891ba" />
 
-Проверим запущенные контейнеры:
+Проверим, что контейнеры Elasticsearch и Kibana запущены:
 
-```bash
+```
 docker ps
 ```
+
 <img width="1595" height="128" alt="image" src="https://github.com/user-attachments/assets/f44f03e3-427f-486e-8f53-f941524ce99f" />
 
 Откроем Kibana в браузере:
 
-```text
-http://<IP-адрес-сервера>:5601
+```
+http://localhost:5601/
 ```
 <img width="1419" height="862" alt="image" src="https://github.com/user-attachments/assets/56b001b3-17b5-4948-b190-3b930a0d46fc" />
 
 Далее перейдём в раздел:
 
-```text
+```
 Dev Tools → Console
 ```
-<img width="534" height="371" alt="image" src="https://github.com/user-attachments/assets/4f4e568e-c5b0-488d-bc98-16373c9f8553" />
 
-Выполним запрос:
+Выполним запрос к Elasticsearch:
 
-```http
+```
 GET /_cluster/health?pretty
 ```
+В результате Kibana вывела состояние кластера Elasticsearch. В ответе видно, что кластер находится в состоянии green, а параметр cluster_name имеет нестандартное значение:
 
-
-В результате Kibana вывела состояние кластера Elasticsearch, где также видно нестандартное имя кластера:
-
-```text
-  "cluster_name" : "mkzinovyev-elk-cluster",
+```
+"cluster_name" : "mkzinovyev-elk-cluster"
 ```
 
-Итог: Kibana успешно запущена и подключена к Elasticsearch.
+Итог: Kibana успешно запущена, подключена к Elasticsearch и позволяет выполнять запросы к кластеру через Dev Tools.
 
-**Скриншот - Kibana Dev Tools с запросом GET /_cluster/health?pretty:**  
+Скриншот - Kibana Dev Tools с запросом GET /_cluster/health?pretty:
 
 <img width="1915" height="591" alt="image" src="https://github.com/user-attachments/assets/83f89a9f-3a25-4d5d-a41c-aa463833eb5e" />
-
----
 
 ### Задание 3. Logstash
 
