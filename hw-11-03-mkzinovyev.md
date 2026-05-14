@@ -213,6 +213,8 @@ docker compose up -d elasticsearch kibana
 ```
 docker compose ps
 ```
+<img width="1386" height="105" alt="image" src="https://github.com/user-attachments/assets/5b264d5c-828f-4fe9-9e91-8e35e30cebc8" />
+
 
 Проверим состояние кластера Elasticsearch:
 
@@ -263,24 +265,28 @@ Kibana была запущена в Docker-контейнере и подклю�
 ```bash
 docker compose up -d kibana
 ```
+<img width="1430" height="90" alt="image" src="https://github.com/user-attachments/assets/0a770508-babd-4697-8587-4ac2302891ba" />
 
 Проверим запущенные контейнеры:
 
 ```bash
 docker ps
 ```
+<img width="1595" height="128" alt="image" src="https://github.com/user-attachments/assets/f44f03e3-427f-486e-8f53-f941524ce99f" />
 
 Откроем Kibana в браузере:
 
 ```text
 http://<IP-адрес-сервера>:5601
 ```
+<img width="1419" height="862" alt="image" src="https://github.com/user-attachments/assets/56b001b3-17b5-4948-b190-3b930a0d46fc" />
 
 Далее перейдём в раздел:
 
 ```text
 Dev Tools → Console
 ```
+<img width="534" height="371" alt="image" src="https://github.com/user-attachments/assets/4f4e568e-c5b0-488d-bc98-16373c9f8553" />
 
 Выполним запрос:
 
@@ -288,17 +294,18 @@ Dev Tools → Console
 GET /_cluster/health?pretty
 ```
 
+
 В результате Kibana вывела состояние кластера Elasticsearch, где также видно нестандартное имя кластера:
 
 ```text
-redos-random-cluster-2026
+  "cluster_name" : "mkzinovyev-elk-cluster",
 ```
 
 Итог: Kibana успешно запущена и подключена к Elasticsearch.
 
 **Скриншот - Kibana Dev Tools с запросом GET /_cluster/health?pretty:**  
 
-![Скриншот Kibana Dev Tools](screenshots/02-kibana-dev-tools.png)
+<img width="1915" height="591" alt="image" src="https://github.com/user-attachments/assets/83f89a9f-3a25-4d5d-a41c-aa463833eb5e" />
 
 ---
 
