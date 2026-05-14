@@ -177,62 +177,74 @@ cluster.name=redos-random-cluster-2026
 
 ### Ответ задание 1. Elasticsearch
 
-Elasticsearch был запущен в Docker-контейнере через Docker Compose.
+Elasticsearch был запущен в Docker-контейнере через Docker Compose на Red OS 7.
 
-В файле `docker-compose.yml` был указан нестандартный `cluster.name`:
-
-```yaml
-cluster.name=redos-random-cluster-2026
-```
-
-Запустим Elasticsearch:
+Для работы Elasticsearch предварительно был увеличен системный параметр `vm.max_map_count`:
 
 ```bash
+echo "vm.max_map_count=262144" | sudo tee -a /etc/sysctl.conf
+sudo sysctl -p
+
+ В файле docker-compose.yaml для сервиса Elasticsearch был указан нестандартный параметр cluster.name:
+
+```
+environment:
+  - xpack.security.enabled=false
+  - discovery.type=single-node
+  - cluster.name=mkzinovyev-elk-cluster
+---
+После этого Elasticsearch был запущен командой:
+
+```
 docker compose up -d elasticsearch
 ```
+В моём случае вместе с Elasticsearch также была запущена Kibana для выполнения следующего задания:
 
-Если используется старая версия Docker Compose, команда может быть такой:
-
-```bash
-docker-compose up -d elasticsearch
 ```
+docker compose up -d elasticsearch kibana
+```
+Скриншот - запуск контейнеров Elasticsearch и Kibana через Docker Compose:
 
-Проверим, что контейнер запущен:
+<img width="2003" height="976" alt="изображение" src="https://github.com/user-attachments/assets/81c505df-6a89-4f27-bb72-f9dfd73c0e20" />
 
-```bash
-docker ps
+
+Проверим, что контейнеры запущены:
+
+```
+docker compose ps
 ```
 
 Проверим состояние кластера Elasticsearch:
 
-```bash
+```
 curl -X GET 'localhost:9200/_cluster/health?pretty'
 ```
 
-Ожидаемый результат:
+Результат выполнения команды:
 
-```json
+```
 {
-  "cluster_name" : "redos-random-cluster-2026",
+  "cluster_name" : "mkzinovyev-elk-cluster",
   "status" : "green",
   "timed_out" : false,
   "number_of_nodes" : 1,
   "number_of_data_nodes" : 1,
-  "active_primary_shards" : 0,
-  "active_shards" : 0,
+  "active_primary_shards" : 1,
+  "active_shards" : 1,
   "relocating_shards" : 0,
   "initializing_shards" : 0,
-  "unassigned_shards" : 0
+  "unassigned_shards" : 0,
+  "delayed_unassigned_shards" : 0,
+  "number_of_pending_tasks" : 0,
+  "number_of_in_flight_fetch" : 0,
+  "task_max_waiting_in_queue_millis" : 0,
+  "active_shards_percent_as_number" : 100.0
 }
 ```
+На скриншоте видно, что Elasticsearch успешно запущен, состояние кластера green, а параметр cluster_name имеет нестандартное значение `mkzinovyev-elk-cluster`.
 
-Итог: Elasticsearch успешно запущен, нестандартный `cluster_name` отображается в выводе команды `curl`.
-
-**Скриншот - проверка состояния Elasticsearch и нестандартного cluster_name:**  
-
-![Скриншот Elasticsearch cluster health](screenshots/01-elasticsearch-health.png)
-
----
+Скриншот - проверка состояния Elasticsearch и нестандартного cluster_name:
+<img width="744" height="337" alt="изображение" src="https://github.com/user-attachments/assets/53ce8c47-f9e0-4907-b447-693f0b2d4ae3" />
 
 ### Задание 2. Kibana
 
