@@ -28,6 +28,7 @@ sudo dnf install -y docker-ce docker-ce-cli docker-compose
 sudo systemctl enable docker --now
 sudo systemctl status docker
 ```
+<img width="1356" height="505" alt="изображение" src="https://github.com/user-attachments/assets/bdba5bb6-15a0-46a5-a1a9-f9bc971ecc40" />
 
 Добавим текущего пользователя в группу `docker`, чтобы запускать контейнеры без `sudo`:
 
@@ -35,6 +36,7 @@ sudo systemctl status docker
 sudo usermod -aG docker $USER
 newgrp docker
 ```
+<img width="554" height="53" alt="изображение" src="https://github.com/user-attachments/assets/6e44b3e0-ec4b-443d-9d0a-68e07a019a57" />
 
 Проверим версию Docker и Docker Compose:
 
@@ -42,6 +44,8 @@ newgrp docker
 docker --version
 docker-compose version || docker compose version
 ```
+<img width="563" height="104" alt="изображение" src="https://github.com/user-attachments/assets/4433019a-b007-41a1-8a7f-0f7c0a515e5c" />
+<img width="363" height="40" alt="изображение" src="https://github.com/user-attachments/assets/156b9eff-0e3a-4f4c-bbb1-50f572ec6d35" />
 
 Перед запуском Elasticsearch увеличим параметр `vm.max_map_count`:
 
@@ -55,12 +59,14 @@ sudo sysctl -w vm.max_map_count=262144
 echo "vm.max_map_count=262144" | sudo tee -a /etc/sysctl.conf
 sudo sysctl -p
 ```
+<img width="908" height="137" alt="изображение" src="https://github.com/user-attachments/assets/55a3fa37-dc39-49b4-9e57-4b29dab65f12" />
 
 Создадим рабочие каталоги для конфигурационных файлов и скриншотов:
 
 ```bash
 mkdir -p logstash/pipeline filebeat screenshots
 ```
+<img width="1916" height="759" alt="изображение" src="https://github.com/user-attachments/assets/5492eca1-a197-4be8-9b8c-42a19fa182fc" />
 
 ---
 
