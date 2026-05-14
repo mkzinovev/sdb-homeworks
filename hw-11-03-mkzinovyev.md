@@ -300,6 +300,8 @@ GET /_cluster/health?pretty
 
 <img width="1915" height="591" alt="image" src="https://github.com/user-attachments/assets/83f89a9f-3a25-4d5d-a41c-aa463833eb5e" />
 
+Вот готовый аккуратный блок для README.md по заданию 3:
+
 ### Задание 3. Logstash
 
 Установите и запустите Logstash и Nginx. С помощью Logstash отправьте access-лог Nginx в Elasticsearch.
@@ -310,31 +312,25 @@ GET /_cluster/health?pretty
 
 ### Ответ задание 3. Logstash
 
-Для выполнения задания был запущен Nginx и Logstash.
+Для выполнения задания были запущены контейнеры Nginx и Logstash.
 
-Logstash читает файл access-лога Nginx:
+Nginx записывает access-логи в файл:
 
 ```text
 /var/log/nginx/access.log
-```
 
-Затем Logstash парсит записи и отправляет их в Elasticsearch в индекс:
+Logstash читает этот файл, обрабатывает записи через фильтр grok и отправляет их в Elasticsearch в индекс:
 
-```text
 nginx-logstash-*
+Конфигурация Logstash
+
+Создадим файл конфигурации Logstash:
 ```
-
-### Конфигурация Logstash
-
-Создадим файл конфигурации:
-
-```bash
 nano logstash/pipeline/logstash.conf
 ```
+Содержимое файла logstash/pipeline/logstash.conf:
 
-Содержимое файла `logstash/pipeline/logstash.conf`:
-
-```conf
+```
 input {
   file {
     path => "/var/log/nginx/access.log"
@@ -372,86 +368,72 @@ output {
     codec => rubydebug
   }
 }
-```
-
+``` 
 Запустим Nginx и Logstash:
 
-```bash
 docker compose up -d nginx logstash
-```
 
-Проверим контейнеры:
+Проверим запущенные контейнеры:
 
-```bash
 docker ps
-```
+
+<img width="539" height="142" alt="image" src="https://github.com/user-attachments/assets/09f86696-3733-4d79-840e-189f582693b3" />
 
 Сгенерируем несколько запросов к Nginx, чтобы появились записи в access-логе:
 
-```bash
 curl http://localhost:8080/
 curl http://localhost:8080/test1
 curl http://localhost:8080/test2
 curl http://localhost:8080/test3
-```
 
-Проверим, что Nginx записал логи:
+Проверим, что Nginx записал access-логи:
 
-```bash
 docker exec -it nginx cat /var/log/nginx/access.log
-```
 
 Проверим логи Logstash:
 
-```bash
 docker logs logstash --tail=100
-```
 
-Проверим, что в Elasticsearch появился индекс Logstash:
+Проверим, что в Elasticsearch появился индекс с логами от Logstash:
 
-```bash
 curl 'localhost:9200/_cat/indices?v'
-```
 
-Ожидаемый индекс:
+В списке индексов должен появиться индекс вида:
 
-```text
 nginx-logstash-YYYY.MM.DD
-```
-
-### Просмотр логов в Kibana
+Просмотр логов в Kibana
 
 В Kibana создадим Data View:
 
-```text
 Stack Management → Data Views → Create data view
-```
 
 Укажем шаблон индекса:
 
-```text
 nginx-logstash-*
-```
 
-Поле времени:
+В качестве поля времени выберем:
 
-```text
 @timestamp
-```
 
 После создания Data View перейдём в раздел:
 
-```text
 Analytics → Discover
-```
 
-В Discover выберем Data View `nginx-logstash-*` и проверим, что отображаются access-логи Nginx.
+В Discover выберем Data View:
 
-Итог: Logstash успешно прочитал access-лог Nginx, обработал его и отправил данные в Elasticsearch.
+nginx-logstash-*
 
-**Скриншот - логи Nginx в Kibana, отправленные через Logstash:**  
+После этого в интерфейсе Kibana стали отображаться access-логи Nginx, которые были отправлены через Logstash.
 
-![Скриншот логов Nginx через Logstash](screenshots/03-nginx-logs-logstash.png)
+Итог: Logstash успешно прочитал access-лог Nginx, обработал записи и отправил данные в Elasticsearch.
+
+Скриншот - запущенные контейнеры Nginx и Logstash:
+
+Скриншот - проверка access-лога Nginx:
+
+Скриншот - индекс nginx-logstash в Elasticsearch:
+
+Скриншот - логи Nginx в Kibana, отправленные через Logstash:
 
 ---
 
