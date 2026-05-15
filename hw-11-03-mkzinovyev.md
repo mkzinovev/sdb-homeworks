@@ -318,7 +318,7 @@ Nginx записывает access-логи в файл:
 
 ```text
 /var/log/nginx/access.log
-
+```
 Logstash читает этот файл, обрабатывает записи через фильтр grok и отправляет их в Elasticsearch в индекс:
 
 nginx-logstash-*
@@ -386,13 +386,19 @@ curl http://localhost:8080/test1
 curl http://localhost:8080/test2
 curl http://localhost:8080/test3
 
-Проверим, что Nginx записал access-логи:
+Скриншот — проверка access-лога Nginx:
 
-docker exec -it nginx cat /var/log/nginx/access.log
+<img width="490" height="680" alt="image" src="https://github.com/user-attachments/assets/d4f10527-546d-4089-a447-562f2504dce7" />
+
+На скриншоте видно, что после выполнения запросов к Nginx в файле `/var/log/nginx/access.log` появились записи.  
+Запрос к главной странице вернул стандартную страницу Nginx, а тестовые запросы `/test1`, `/test2`, `/test3` вернули `404 Not Found`, что также корректно записалось в access-лог.
 
 Проверим логи Logstash:
 
+```
 docker logs logstash --tail=100
+```
+<img width="2327" height="730" alt="image" src="https://github.com/user-attachments/assets/f3355afe-0658-4feb-9c89-2f63c2311e4b" />
 
 Проверим, что в Elasticsearch появился индекс с логами от Logstash:
 
@@ -401,6 +407,10 @@ curl 'localhost:9200/_cat/indices?v'
 В списке индексов должен появиться индекс вида:
 
 nginx-logstash-YYYY.MM.DD
+
+<img width="826" height="135" alt="image" src="https://github.com/user-attachments/assets/fcea7bdd-2f17-4afa-a5e5-c278535c1bdc" />
+
+
 Просмотр логов в Kibana
 
 В Kibana создадим Data View:
@@ -413,27 +423,26 @@ nginx-logstash-*
 
 В качестве поля времени выберем:
 
+```
 @timestamp
+```
 
 После создания Data View перейдём в раздел:
-
+```
 Analytics → Discover
-
+```
 В Discover выберем Data View:
 
+```
 nginx-logstash-*
-
+```
 После этого в интерфейсе Kibana стали отображаться access-логи Nginx, которые были отправлены через Logstash.
 
 Итог: Logstash успешно прочитал access-лог Nginx, обработал записи и отправил данные в Elasticsearch.
 
-Скриншот - запущенные контейнеры Nginx и Logstash:
-
-Скриншот - проверка access-лога Nginx:
-
-Скриншот - индекс nginx-logstash в Elasticsearch:
 
 Скриншот - логи Nginx в Kibana, отправленные через Logstash:
+<img width="2549" height="759" alt="image" src="https://github.com/user-attachments/assets/02338271-0bce-49f4-a5ae-68ca0274a788" />
 
 ---
 
@@ -491,6 +500,7 @@ logging.level: info
 ```bash
 docker compose up -d filebeat
 ```
+<img width="483" height="95" alt="image" src="https://github.com/user-attachments/assets/a815352c-54bc-44bd-be24-63527370610e" />
 
 Сгенерируем новые обращения к Nginx:
 
@@ -499,6 +509,7 @@ curl http://localhost:8080/filebeat1
 curl http://localhost:8080/filebeat2
 curl http://localhost:8080/filebeat3
 ```
+<img width="616" height="317" alt="image" src="https://github.com/user-attachments/assets/5bc0a1d8-32a0-4ffc-bcaf-8ffcc0c65db4" />
 
 Проверим логи Filebeat:
 
@@ -550,7 +561,8 @@ Analytics → Discover
 
 **Скриншот - логи Nginx в Kibana, отправленные через Filebeat:**  
 
-![Скриншот логов Nginx через Filebeat](screenshots/04-nginx-logs-filebeat.png)
+<img width="2542" height="1184" alt="image" src="https://github.com/user-attachments/assets/b043a4de-2f04-4e61-995d-89cb5da2c7de" />
+
 
 ---
 
