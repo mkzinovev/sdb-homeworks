@@ -1,13 +1,14 @@
-# Домашнее задание к занятию «ELK» - выполнил `Михаил Зиновьев`
+# Домашнее задание к занятию «ELK» — выполнил `Михаил Зиновьев`
+
 ---
 
-### Используемое окружение
+## Используемое окружение
 
 Работа выполнялась на сервере с **Red OS 7**.
 
-Для развёртывания ELK использовался **Docker Compose**.
+Для развёртывания стенда использовался **Docker Compose**.
 
-В работе используются следующие сервисы:
+В работе были использованы следующие сервисы:
 
 1. Elasticsearch 7.17.9
 2. Kibana 7.17.9
@@ -17,72 +18,84 @@
 
 ---
 
-### Предварительная подготовка Red OS 7
+## Предварительная подготовка Red OS 7
 
 Перед выполнением заданий был установлен и запущен Docker.
 
-Команды:
+Были выполнены команды:
 
 ```bash
 sudo dnf install -y docker-ce docker-ce-cli docker-compose
 sudo systemctl enable docker --now
 sudo systemctl status docker
 ```
+
 <img width="1356" height="505" alt="изображение" src="https://github.com/user-attachments/assets/bdba5bb6-15a0-46a5-a1a9-f9bc971ecc40" />
 
-Добавим текущего пользователя в группу `docker`, чтобы запускать контейнеры без `sudo`:
+Текущий пользователь был добавлен в группу `docker`, чтобы запускать контейнеры без использования `sudo`.
+
+Были выполнены команды:
 
 ```bash
 sudo usermod -aG docker $USER
 newgrp docker
 ```
+
 <img width="554" height="53" alt="изображение" src="https://github.com/user-attachments/assets/6e44b3e0-ec4b-443d-9d0a-68e07a019a57" />
 
-Проверим версию Docker и Docker Compose:
+Была выполнена проверка версии Docker и Docker Compose.
+
+Команды проверки:
 
 ```bash
 docker --version
 docker-compose version || docker compose version
 ```
-<img width="563" height="104" alt="изображение" src="https://github.com/user-attachments/assets/4433019a-b007-41a1-8a7f-0f7c0a515e5c" />
+
 <img width="363" height="40" alt="изображение" src="https://github.com/user-attachments/assets/156b9eff-0e3a-4f4c-bbb1-50f572ec6d35" />
 
-Перед запуском Elasticsearch увеличим параметр `vm.max_map_count`:
+Перед запуском Elasticsearch был увеличен системный параметр `vm.max_map_count`.
+
+Была выполнена команда:
 
 ```bash
 sudo sysctl -w vm.max_map_count=262144
 ```
 
-Чтобы параметр сохранился после перезагрузки:
+Чтобы параметр сохранился после перезагрузки, были выполнены команды:
 
 ```bash
 echo "vm.max_map_count=262144" | sudo tee -a /etc/sysctl.conf
 sudo sysctl -p
 ```
+
 <img width="908" height="137" alt="изображение" src="https://github.com/user-attachments/assets/55a3fa37-dc39-49b4-9e57-4b29dab65f12" />
 
-Создадим рабочие каталоги для конфигурационных файлов и скриншотов:
+Для конфигурационных файлов и скриншотов были созданы рабочие каталоги.
+
+Была выполнена команда:
 
 ```bash
 mkdir -p logstash/pipeline filebeat screenshots
 ```
+
 <img width="1916" height="759" alt="изображение" src="https://github.com/user-attachments/assets/5492eca1-a197-4be8-9b8c-42a19fa182fc" />
 
 ---
 
-### Основной файл `docker-compose.yml`
+## Основной файл `docker-compose.yml`
 
-Создадим файл `docker-compose.yml`:
+Для описания сервисов стенда был создан файл `docker-compose.yml`.
+
+Была выполнена команда:
 
 ```bash
 nano docker-compose.yml
 ```
 
-Содержимое файла:
+Содержимое файла `docker-compose.yml`:
 
 ```yaml
-version: '3.7'
-
 services:
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:7.17.9
@@ -90,7 +103,7 @@ services:
     environment:
       - xpack.security.enabled=false
       - discovery.type=single-node
-      - cluster.name=redos-random-cluster-2026
+      - cluster.name=mkzinovyev-elk-cluster
       - ES_JAVA_OPTS=-Xms1g -Xmx1g
     ulimits:
       memlock:
@@ -159,72 +172,85 @@ volumes:
     driver: local
 ```
 
-В данном файле для Elasticsearch был задан нестандартный параметр:
+В файле `docker-compose.yml` для Elasticsearch был задан нестандартный параметр имени кластера:
 
 ```yaml
-cluster.name=redos-random-cluster-2026
+cluster.name=mkzinovyev-elk-cluster
 ```
 
 ---
 
-### Задание 1. Elasticsearch
+## Задание 1. Elasticsearch
 
 Установите и запустите Elasticsearch, после чего поменяйте параметр `cluster_name` на случайный.
 
-Приведите скриншот команды `curl -X GET 'localhost:9200/_cluster/health?pretty'`, сделанной на сервере с установленным Elasticsearch. Где будет виден нестандартный `cluster_name`.
+Приведите скриншот команды `curl -X GET 'localhost:9200/_cluster/health?pretty'`, сделанной на сервере с установленным Elasticsearch, где будет виден нестандартный `cluster_name`.
 
 ---
 
-### Ответ задание 1. Elasticsearch
+## Ответ на задание 1. Elasticsearch
 
-Elasticsearch был запущен в Docker-контейнере через Docker Compose на Red OS 7.
+Elasticsearch был запущен в Docker-контейнере через Docker Compose на сервере с Red OS 7.
 
-Для работы Elasticsearch предварительно был увеличен системный параметр `vm.max_map_count`:
+Перед запуском Elasticsearch был увеличен системный параметр `vm.max_map_count`.
+
+Были выполнены команды:
 
 ```bash
 echo "vm.max_map_count=262144" | sudo tee -a /etc/sysctl.conf
 sudo sysctl -p
-
- В файле docker-compose.yaml для сервиса Elasticsearch был указан нестандартный параметр cluster.name:
-
 ```
+
+В файле `docker-compose.yml` для сервиса Elasticsearch был указан нестандартный параметр `cluster.name`:
+
+```yaml
 environment:
   - xpack.security.enabled=false
   - discovery.type=single-node
   - cluster.name=mkzinovyev-elk-cluster
----
-После этого Elasticsearch был запущен командой:
-
 ```
+
+После этого был выполнен запуск Elasticsearch.
+
+Команда запуска:
+
+```bash
 docker compose up -d elasticsearch
 ```
-В моём случае вместе с Elasticsearch также была запущена Kibana для выполнения следующего задания:
 
-```
+В рамках выполнения работы вместе с Elasticsearch также была запущена Kibana, которая используется в следующем задании.
+
+Команда запуска:
+
+```bash
 docker compose up -d elasticsearch kibana
 ```
-Скриншот - запуск контейнеров Elasticsearch и Kibana через Docker Compose:
+
+Скриншот — запуск контейнеров Elasticsearch и Kibana через Docker Compose:
 
 <img width="2003" height="976" alt="изображение" src="https://github.com/user-attachments/assets/81c505df-6a89-4f27-bb72-f9dfd73c0e20" />
 
+Была выполнена проверка запущенных контейнеров.
 
-Проверим, что контейнеры запущены:
+Команда проверки:
 
-```
+```bash
 docker compose ps
 ```
+
 <img width="1386" height="105" alt="image" src="https://github.com/user-attachments/assets/5b264d5c-828f-4fe9-9e91-8e35e30cebc8" />
 
+Была выполнена проверка состояния кластера Elasticsearch.
 
-Проверим состояние кластера Elasticsearch:
+Команда проверки:
 
-```
+```bash
 curl -X GET 'localhost:9200/_cluster/health?pretty'
 ```
 
 Результат выполнения команды:
 
-```
+```json
 {
   "cluster_name" : "mkzinovyev-elk-cluster",
   "status" : "green",
@@ -243,12 +269,18 @@ curl -X GET 'localhost:9200/_cluster/health?pretty'
   "active_shards_percent_as_number" : 100.0
 }
 ```
-На скриншоте видно, что Elasticsearch успешно запущен, состояние кластера green, а параметр cluster_name имеет нестандартное значение `mkzinovyev-elk-cluster`.
 
-Скриншот - проверка состояния Elasticsearch и нестандартного cluster_name:
+На скриншоте видно, что Elasticsearch успешно запущен, состояние кластера — `green`, а параметр `cluster_name` имеет нестандартное значение `mkzinovyev-elk-cluster`.
+
+Скриншот — проверка состояния Elasticsearch и нестандартного `cluster_name`:
+
 <img width="744" height="337" alt="изображение" src="https://github.com/user-attachments/assets/53ce8c47-f9e0-4907-b447-693f0b2d4ae3" />
 
-### Задание 2. Kibana
+Итог: Elasticsearch был успешно запущен, а параметр `cluster_name` был изменён на нестандартное значение `mkzinovyev-elk-cluster`.
+
+---
+
+## Задание 2. Kibana
 
 Установите и запустите Kibana.
 
@@ -256,53 +288,65 @@ curl -X GET 'localhost:9200/_cluster/health?pretty'
 
 ---
 
-### Ответ задание 2. Kibana
+## Ответ на задание 2. Kibana
 
-Так как Elasticsearch уже был запущен на предыдущем этапе, запустим Kibana:
+Так как Elasticsearch был запущен на предыдущем этапе, далее была запущена Kibana.
+
+Команда запуска:
+
+```bash
+docker compose up -d kibana
+```
 
 <img width="1430" height="90" alt="image" src="https://github.com/user-attachments/assets/0a770508-babd-4697-8587-4ac2302891ba" />
 
-Проверим, что контейнеры Elasticsearch и Kibana запущены:
+Была выполнена проверка запущенных контейнеров Elasticsearch и Kibana.
 
-```
+Команда проверки:
+
+```bash
 docker ps
 ```
 
 <img width="1595" height="128" alt="image" src="https://github.com/user-attachments/assets/f44f03e3-427f-486e-8f53-f941524ce99f" />
 
-Откроем Kibana в браузере:
+После запуска Kibana была открыта в браузере.
 
-```
+Адрес подключения:
+
+```text
 http://localhost:5601/
 ```
+
 <img width="1419" height="862" alt="image" src="https://github.com/user-attachments/assets/56b001b3-17b5-4948-b190-3b930a0d46fc" />
 
-Далее перейдём в раздел:
+Далее в интерфейсе Kibana был открыт раздел:
 
-```
+```text
 Dev Tools → Console
 ```
 
-Выполним запрос к Elasticsearch:
+В консоли Kibana был выполнен запрос к Elasticsearch:
 
-```
+```http
 GET /_cluster/health?pretty
 ```
-В результате Kibana вывела состояние кластера Elasticsearch. В ответе видно, что кластер находится в состоянии green, а параметр cluster_name имеет нестандартное значение:
 
-```
+В результате выполнения запроса Kibana отобразила состояние кластера Elasticsearch. В ответе видно, что кластер находится в состоянии `green`, а параметр `cluster_name` имеет нестандартное значение:
+
+```json
 "cluster_name" : "mkzinovyev-elk-cluster"
 ```
 
-Итог: Kibana успешно запущена, подключена к Elasticsearch и позволяет выполнять запросы к кластеру через Dev Tools.
-
-Скриншот - Kibana Dev Tools с запросом GET /_cluster/health?pretty:
+Скриншот — Kibana Dev Tools с запросом `GET /_cluster/health?pretty`:
 
 <img width="1915" height="591" alt="image" src="https://github.com/user-attachments/assets/83f89a9f-3a25-4d5d-a41c-aa463833eb5e" />
 
-Вот готовый аккуратный блок для README.md по заданию 3:
+Итог: Kibana была успешно запущена, подключена к Elasticsearch и позволила выполнить запрос к кластеру через Dev Tools.
 
-### Задание 3. Logstash
+---
+
+## Задание 3. Logstash
 
 Установите и запустите Logstash и Nginx. С помощью Logstash отправьте access-лог Nginx в Elasticsearch.
 
@@ -310,7 +354,7 @@ GET /_cluster/health?pretty
 
 ---
 
-### Ответ задание 3. Logstash
+## Ответ на задание 3. Logstash
 
 Для выполнения задания были запущены контейнеры Nginx и Logstash.
 
@@ -319,18 +363,26 @@ Nginx записывает access-логи в файл:
 ```text
 /var/log/nginx/access.log
 ```
-Logstash читает этот файл, обрабатывает записи через фильтр grok и отправляет их в Elasticsearch в индекс:
 
+Logstash был настроен на чтение файла `/var/log/nginx/access.log`, обработку записей через фильтр `grok` и отправку событий в Elasticsearch в индекс:
+
+```text
 nginx-logstash-*
-Конфигурация Logstash
-
-Создадим файл конфигурации Logstash:
 ```
+
+### Конфигурация Logstash
+
+Для Logstash был создан конфигурационный файл.
+
+Была выполнена команда:
+
+```bash
 nano logstash/pipeline/logstash.conf
 ```
-Содержимое файла logstash/pipeline/logstash.conf:
 
-```
+Содержимое файла `logstash/pipeline/logstash.conf`:
+
+```conf
 input {
   file {
     path => "/var/log/nginx/access.log"
@@ -368,85 +420,126 @@ output {
     codec => rubydebug
   }
 }
-``` 
-Запустим Nginx и Logstash:
+```
 
+После настройки конфигурации были запущены контейнеры Nginx и Logstash.
+
+Команда запуска:
+
+```bash
 docker compose up -d nginx logstash
+```
 
-Проверим запущенные контейнеры:
+Была выполнена проверка запущенных контейнеров.
 
+Команда проверки:
+
+```bash
 docker ps
+```
 
 <img width="539" height="142" alt="image" src="https://github.com/user-attachments/assets/09f86696-3733-4d79-840e-189f582693b3" />
 
-Сгенерируем несколько запросов к Nginx, чтобы появились записи в access-логе:
+Для генерации записей в access-логе Nginx были выполнены тестовые HTTP-запросы.
 
+Команды:
+
+```bash
 curl http://localhost:8080/
 curl http://localhost:8080/test1
 curl http://localhost:8080/test2
 curl http://localhost:8080/test3
+```
+
+После выполнения запросов была проведена проверка access-лога Nginx.
+
+Команда проверки:
+
+```bash
+docker exec -it logstash tail -n 10 /var/log/nginx/access.log
+```
 
 Скриншот — проверка access-лога Nginx:
 
 <img width="490" height="680" alt="image" src="https://github.com/user-attachments/assets/d4f10527-546d-4089-a447-562f2504dce7" />
 
-На скриншоте видно, что после выполнения запросов к Nginx в файле `/var/log/nginx/access.log` появились записи.  
-Запрос к главной странице вернул стандартную страницу Nginx, а тестовые запросы `/test1`, `/test2`, `/test3` вернули `404 Not Found`, что также корректно записалось в access-лог.
+На скриншоте видно, что после выполнения запросов к Nginx в файле `/var/log/nginx/access.log` появились записи. Запрос к главной странице вернул код `200`, а тестовые запросы `/test1`, `/test2`, `/test3` вернули код `404`, что также корректно записалось в access-лог.
 
-Проверим логи Logstash:
+Была выполнена проверка логов Logstash.
 
-```
+Команда проверки:
+
+```bash
 docker logs logstash --tail=100
 ```
+
 <img width="2327" height="730" alt="image" src="https://github.com/user-attachments/assets/f3355afe-0658-4feb-9c89-2f63c2311e4b" />
 
-Проверим, что в Elasticsearch появился индекс с логами от Logstash:
+На скриншоте видно, что Logstash успешно запустил pipeline `main`, подключился к Elasticsearch и начал отслеживать файл access-лога Nginx.
 
-curl 'localhost:9200/_cat/indices?v'
+Была выполнена проверка наличия индекса Logstash в Elasticsearch.
 
-В списке индексов должен появиться индекс вида:
+Команда проверки:
 
+```bash
+curl 'localhost:9200/_cat/indices?v' | grep nginx
+```
+
+В результате проверки был обнаружен индекс вида:
+
+```text
 nginx-logstash-YYYY.MM.DD
+```
+
+Скриншот — проверка индекса `nginx-logstash-*` в Elasticsearch:
 
 <img width="826" height="135" alt="image" src="https://github.com/user-attachments/assets/fcea7bdd-2f17-4afa-a5e5-c278535c1bdc" />
 
+### Просмотр логов Logstash в Kibana
 
-Просмотр логов в Kibana
+Для просмотра логов в Kibana был создан index pattern.
 
-В Kibana создадим Data View:
+В интерфейсе Kibana был открыт раздел:
 
-Stack Management → Data Views → Create data view
-
-Укажем шаблон индекса:
-
-nginx-logstash-*
-
-В качестве поля времени выберем:
-
+```text
+Stack Management → Index Patterns → Create index pattern
 ```
+
+Был указан шаблон индекса:
+
+```text
+nginx-logstash-*
+```
+
+В качестве поля времени было выбрано поле:
+
+```text
 @timestamp
 ```
 
-После создания Data View перейдём в раздел:
-```
+После создания index pattern был открыт раздел:
+
+```text
 Analytics → Discover
 ```
-В Discover выберем Data View:
 
-```
+В Discover был выбран index pattern:
+
+```text
 nginx-logstash-*
 ```
+
 После этого в интерфейсе Kibana стали отображаться access-логи Nginx, которые были отправлены через Logstash.
 
-Итог: Logstash успешно прочитал access-лог Nginx, обработал записи и отправил данные в Elasticsearch.
+Скриншот — логи Nginx в Kibana, отправленные через Logstash:
 
-
-Скриншот - логи Nginx в Kibana, отправленные через Logstash:
 <img width="2549" height="759" alt="image" src="https://github.com/user-attachments/assets/02338271-0bce-49f4-a5ae-68ca0274a788" />
+
+Итог: Logstash успешно прочитал access-лог Nginx, обработал записи через `grok` и отправил данные в Elasticsearch. В Kibana Discover были отображены события из индекса `nginx-logstash-*`.
 
 ---
 
-### Задание 4. Filebeat
+## Задание 4. Filebeat
 
 Установите и запустите Filebeat. Переключите поставку логов Nginx с Logstash на Filebeat.
 
@@ -454,11 +547,13 @@ nginx-logstash-*
 
 ---
 
-### Ответ задание 4. Filebeat
+## Ответ на задание 4. Filebeat
 
 Для выполнения задания поставка логов Nginx была переключена с Logstash на Filebeat.
 
-Чтобы не было дублирования событий, перед запуском Filebeat остановим Logstash:
+Чтобы избежать дублирования событий, перед запуском Filebeat был остановлен Logstash.
+
+Была выполнена команда:
 
 ```bash
 docker compose stop logstash
@@ -466,7 +561,9 @@ docker compose stop logstash
 
 ### Конфигурация Filebeat
 
-Создадим файл конфигурации Filebeat:
+Для Filebeat был создан конфигурационный файл.
+
+Была выполнена команда:
 
 ```bash
 nano filebeat/filebeat.yml
@@ -495,237 +592,123 @@ setup.template.pattern: "nginx-filebeat-*"
 logging.level: info
 ```
 
-Запустим Filebeat:
+После настройки конфигурации был запущен Filebeat.
+
+Команда запуска:
 
 ```bash
 docker compose up -d filebeat
 ```
+
 <img width="483" height="95" alt="image" src="https://github.com/user-attachments/assets/a815352c-54bc-44bd-be24-63527370610e" />
 
-Сгенерируем новые обращения к Nginx:
+Была выполнена проверка запущенных контейнеров.
+
+Команда проверки:
+
+```bash
+docker ps
+```
+
+Для генерации новых записей в access-логе Nginx были выполнены тестовые HTTP-запросы.
+
+Команды:
 
 ```bash
 curl http://localhost:8080/filebeat1
 curl http://localhost:8080/filebeat2
 curl http://localhost:8080/filebeat3
 ```
+
 <img width="616" height="317" alt="image" src="https://github.com/user-attachments/assets/5bc0a1d8-32a0-4ffc-bcaf-8ffcc0c65db4" />
 
-Проверим логи Filebeat:
+Была выполнена проверка логов Filebeat.
+
+Команда проверки:
 
 ```bash
 docker logs filebeat --tail=100
 ```
 
-Проверим, что в Elasticsearch появился индекс Filebeat:
+Затем была проведена проверка наличия индекса Filebeat в Elasticsearch.
+
+Команда проверки:
 
 ```bash
-curl 'localhost:9200/_cat/indices?v'
+curl 'localhost:9200/_cat/indices?v' | grep filebeat
 ```
 
-Ожидаемый индекс:
+В результате проверки был обнаружен индекс:
 
 ```text
-nginx-filebeat-YYYY.MM.DD
+nginx-filebeat-2026.05.15
 ```
 
-### Просмотр логов в Kibana
+В индексе присутствовали документы с access-логами Nginx, отправленными через Filebeat.
 
-В Kibana создадим новый Data View:
+### Просмотр логов Filebeat в Kibana
+
+Для просмотра логов в Kibana был создан новый index pattern.
+
+В интерфейсе Kibana был открыт раздел:
 
 ```text
-Stack Management → Data Views → Create data view
+Stack Management → Index Patterns → Create index pattern
 ```
 
-Укажем шаблон индекса:
+Был указан шаблон индекса:
 
 ```text
 nginx-filebeat-*
 ```
 
-Поле времени:
+В качестве поля времени было выбрано поле:
 
 ```text
 @timestamp
 ```
 
-После создания Data View перейдём в раздел:
+После создания index pattern был открыт раздел:
 
 ```text
 Analytics → Discover
 ```
 
-В Discover выберем Data View `nginx-filebeat-*` и проверим, что отображаются access-логи Nginx, отправленные через Filebeat.
+В Discover был выбран index pattern:
 
-Итог: Filebeat успешно прочитал access-лог Nginx и отправил его напрямую в Elasticsearch.
+```text
+nginx-filebeat-*
+```
 
-**Скриншот - логи Nginx в Kibana, отправленные через Filebeat:**  
+После этого в интерфейсе Kibana стали отображаться access-логи Nginx, которые Filebeat прочитал из файла `/var/log/nginx/access.log` и отправил напрямую в Elasticsearch.
+
+Скриншот — логи Nginx в Kibana, отправленные через Filebeat:
 
 <img width="2542" height="1184" alt="image" src="https://github.com/user-attachments/assets/b043a4de-2f04-4e61-995d-89cb5da2c7de" />
 
+На скриншоте видно, что в Kibana Discover выбран index pattern `nginx-filebeat-*`. В документах присутствуют поля `agent.type: filebeat`, `agent.version: 7.17.9`, `log_source: nginx_filebeat`, `log.file.path: /var/log/nginx/access.log`, а также сообщения с запросами `/filebeat1`, `/filebeat2`, `/filebeat3`.
+
+Итог: Filebeat успешно прочитал access-лог Nginx и отправил события напрямую в Elasticsearch. В Kibana Discover были отображены события из индекса `nginx-filebeat-*`.
 
 ---
 
-### Дополнительные задания (со звёздочкой*)
+## Дополнительные задания со звёздочкой
 
-Эти задания дополнительные, то есть не обязательные к выполнению, и никак не повлияют на получение зачёта по этому домашнему заданию.
+Дополнительные задания не являются обязательными и не влияют на получение зачёта по домашнему заданию.
 
-### Задание 5*. Доставка данных
+---
+
+## Задание 5*. Доставка данных
 
 Настройте поставку лога в Elasticsearch через Logstash и Filebeat любого другого сервиса, но не Nginx. Для этого лог должен писаться на файловую систему, Logstash должен корректно его распарсить и разложить на поля.
 
-Приведите скриншот интерфейса Kibana, на котором будет виден этот лог и напишите лог какого приложения отправляется.
+Приведите скриншот интерфейса Kibana, на котором будет виден этот лог, и напишите, лог какого приложения отправляется.
 
 ---
 
-### Ответ задание 5*. Доставка данных
+## Ответ на задание 5*. Доставка данных
 
 Дополнительное задание не выполнялось.
 
 ---
 
-### Полезные команды для проверки
-
-Проверить запущенные контейнеры:
-
-```bash
-docker ps
-```
-
-Посмотреть все контейнеры:
-
-```bash
-docker ps -a
-```
-
-Посмотреть логи Elasticsearch:
-
-```bash
-docker logs elasticsearch --tail=100
-```
-
-Посмотреть логи Kibana:
-
-```bash
-docker logs kibana --tail=100
-```
-
-Посмотреть логи Logstash:
-
-```bash
-docker logs logstash --tail=100
-```
-
-Посмотреть логи Filebeat:
-
-```bash
-docker logs filebeat --tail=100
-```
-
-Проверить индексы Elasticsearch:
-
-```bash
-curl 'localhost:9200/_cat/indices?v'
-```
-
-Проверить состояние кластера Elasticsearch:
-
-```bash
-curl -X GET 'localhost:9200/_cluster/health?pretty'
-```
-
-Остановить стенд:
-
-```bash
-docker compose down
-```
-
-Остановить стенд и удалить данные Elasticsearch:
-
-```bash
-docker compose down -v
-```
-
----
-
-### Возможные ошибки и решения
-
-### Ошибка 1. Elasticsearch не запускается из-за `vm.max_map_count`
-
-Если Elasticsearch не запускается и в логах есть ошибка про `vm.max_map_count`, нужно выполнить на хосте:
-
-```bash
-sudo sysctl -w vm.max_map_count=262144
-```
-
-После этого перезапустить Elasticsearch:
-
-```bash
-docker compose restart elasticsearch
-```
-
----
-
-### Ошибка 2. Kibana долго не открывается
-
-Kibana может запускаться несколько минут.
-
-Проверить логи Kibana можно командой:
-
-```bash
-docker logs kibana --tail=100
-```
-
-Также нужно проверить, что Elasticsearch доступен:
-
-```bash
-curl localhost:9200
-```
-
----
-
-### Ошибка 3. Logstash не отправляет логи
-
-Проверим, что Nginx пишет access-лог:
-
-```bash
-docker exec -it nginx cat /var/log/nginx/access.log
-```
-
-Проверим логи Logstash:
-
-```bash
-docker logs logstash --tail=100
-```
-
-Проверим индексы Elasticsearch:
-
-```bash
-curl 'localhost:9200/_cat/indices?v'
-```
-
----
-
-### Ошибка 4. Filebeat не стартует из-за прав на конфигурационный файл
-
-В `docker-compose.yml` для Filebeat используется параметр:
-
-```yaml
-command: ["--strict.perms=false"]
-```
-
-Он отключает строгую проверку прав на файл `filebeat.yml` внутри контейнера.
-
----
-
-### Вывод
-
-В ходе выполнения работы был развёрнут стек ELK на сервере с Red OS 7 с использованием Docker Compose.
-
-Были выполнены следующие действия:
-
-1. Запущен Elasticsearch с нестандартным именем кластера `redos-random-cluster-2026`.
-2. Запущена Kibana и выполнен запрос `GET /_cluster/health?pretty` через Dev Tools.
-3. Настроена доставка access-логов Nginx в Elasticsearch через Logstash.
-4. Настроена доставка access-логов Nginx в Elasticsearch через Filebeat.
-5. В Kibana созданы Data View для просмотра логов, отправленных через Logstash и Filebeat.
