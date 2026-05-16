@@ -706,9 +706,555 @@ nginx-filebeat-*
 
 ---
 
-## Ответ на задание 5*. Доставка данных
+### Задание 5*. Доставка данных
+
+Настройте поставку лога в Elasticsearch через Logstash и Filebeat любого другого сервиса, но не Nginx. Для этого лог должен писаться на файловую систему, Logstash должен корректно его распарсить и разложить на поля.
+
+Приведите скриншот интерфейса Kibana, на котором будет виден этот лог и напишите лог какого приложения отправляется.
+
+---
+
+### Ответ задание 5*. Доставка данных
 
 Дополнительное задание не выполнялось.
+
+---
+
+### Полезные команды для проверки
+
+Проверить запущенные контейнеры:
+
+```bash
+docker ps
+```
+
+Посмотреть все контейнеры:
+
+```bash
+docker ps -a
+```
+
+Посмотреть логи Elasticsearch:
+
+```bash
+docker logs elasticsearch --tail=100
+```
+
+Посмотреть логи Kibana:
+
+```bash
+docker logs kibana --tail=100
+```
+
+Посмотреть логи Logstash:
+
+```bash
+docker logs logstash --tail=100
+```
+
+Посмотреть логи Filebeat:
+
+```bash
+docker logs filebeat --tail=100
+```
+
+Проверить индексы Elasticsearch:
+
+```bash
+curl 'localhost:9200/_cat/indices?v'
+```
+
+Проверить состояние кластера Elasticsearch:
+
+```bash
+curl -X GET 'localhost:9200/_cluster/health?pretty'
+```
+
+Остановить стенд:
+
+```bash
+docker compose down
+```
+
+Остановить стенд и удалить данные Elasticsearch:
+
+```bash
+docker compose down -v
+```
+
+---
+
+### Возможные ошибки и решения
+
+### Ошибка 1. Elasticsearch не запускается из-за `vm.max_map_count`
+
+Если Elasticsearch не запускается и в логах есть ошибка про `vm.max_map_count`, нужно выполнить на хосте:
+
+```bash
+sudo sysctl -w vm.max_map_count=262144
+```
+
+После этого перезапустить Elasticsearch:
+
+```bash
+docker compose restart elasticsearch
+```
+
+---
+
+### Ошибка 2. Kibana долго не открывается
+
+Kibana может запускаться несколько минут.
+
+Проверить логи Kibana можно командой:
+
+```bash
+docker logs kibana --tail=100
+```
+
+Также нужно проверить, что Elasticsearch доступен:
+
+```bash
+curl localhost:9200
+```
+
+---
+
+### Ошибка 3. Logstash не отправляет логи
+
+Проверим, что Nginx пишет access-лог:
+
+```bash
+docker exec -it nginx cat /var/log/nginx/access.log
+```
+
+Проверим логи Logstash:
+
+```bash
+docker logs logstash --tail=100
+```
+
+Проверим индексы Elasticsearch:
+
+```bash
+curl 'localhost:9200/_cat/indices?v'
+```
+
+---
+
+### Ошибка 4. Filebeat не стартует из-за прав на конфигурационный файл
+
+В `docker-compose.yml` для Filebeat используется параметр:
+
+```yaml
+command: ["--strict.perms=false"]
+```
+
+Он отключает строгую проверку прав на файл `filebeat.yml` внутри контейнера.
+
+---
+### Задание 5*. Доставка данных
+
+Настройте поставку лога в Elasticsearch через Logstash и Filebeat любого другого сервиса, но не Nginx. Для этого лог должен писаться на файловую систему, Logstash должен корректно его распарсить и разложить на поля.
+
+Приведите скриншот интерфейса Kibana, на котором будет виден этот лог, и напишите, лог какого приложения отправляется.
+
+---
+
+### Ответ задание 5*. Доставка данных
+
+Для выполнения дополнительного задания была настроена доставка access-логов веб-сервера **Apache HTTP Server**.
+
+Была использована следующая схема доставки данных:
+
+```text
+Apache HTTP Server → access.log → Filebeat → Logstash → Elasticsearch → Kibana
+```
+
+В качестве источника логов использовался файл access-лога Apache:
+
+```text
+/usr/local/apache2/logs/access.log
+```
+
+В контейнере Filebeat этот файл был доступен по пути:
+
+```text
+/var/log/apache/access.log
+```
+
+Logstash принимал события от Filebeat, обрабатывал строки access-лога через фильтр `grok`, раскладывал данные на отдельные поля и отправлял документы в Elasticsearch в индекс:
+
+```text
+apache-filebeat-logstash-*
+```
+
+---
+
+### Конфигурация Docker Compose
+
+В файл `docker-compose.yml` были добавлены сервисы `apache`, `logstash-apache` и `filebeat-apache`.
+
+```yaml
+  apache:
+    image: httpd:2.4
+    container_name: apache
+    ports:
+      - "8081:80"
+    command: >
+      sh -c "sed -i 's#CustomLog /proc/self/fd/1 common#CustomLog /usr/local/apache2/logs/access.log common#' /usr/local/apache2/conf/httpd.conf &&
+             sed -i 's#ErrorLog /proc/self/fd/2#ErrorLog /usr/local/apache2/logs/error.log#' /usr/local/apache2/conf/httpd.conf &&
+             httpd-foreground"
+    volumes:
+      - apache-logs:/usr/local/apache2/logs
+
+  logstash-apache:
+    image: docker.elastic.co/logstash/logstash:7.17.9
+    container_name: logstash-apache
+    volumes:
+      - ./logstash/apache-pipeline:/usr/share/logstash/pipeline
+    ports:
+      - "5045:5045"
+      - "9601:9600"
+    depends_on:
+      - elasticsearch
+      - apache
+
+  filebeat-apache:
+    image: docker.elastic.co/beats/filebeat:7.17.9
+    container_name: filebeat-apache
+    user: root
+    command: ["filebeat", "-e", "--strict.perms=false"]
+    volumes:
+      - ./filebeat/apache-filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+      - apache-logs:/var/log/apache:ro
+    depends_on:
+      - apache
+      - logstash-apache
+```
+
+Также в блок `volumes` был добавлен отдельный volume для логов Apache:
+
+```yaml
+  apache-logs:
+    driver: local
+```
+
+---
+
+### Конфигурация Logstash для Apache
+
+Был создан каталог для отдельного pipeline Logstash:
+
+```bash
+mkdir -p logstash/apache-pipeline
+```
+
+Был создан файл конфигурации Logstash:
+
+```bash
+nano logstash/apache-pipeline/apache.conf
+```
+
+Содержимое файла `logstash/apache-pipeline/apache.conf`:
+
+```conf
+input {
+  beats {
+    port => 5045
+  }
+}
+
+filter {
+  grok {
+    match => {
+      "message" => "%{COMMONAPACHELOG}"
+    }
+  }
+
+  date {
+    match => [ "timestamp", "dd/MMM/yyyy:HH:mm:ss Z" ]
+    target => "@timestamp"
+  }
+
+  mutate {
+    add_field => {
+      "log_source" => "apache_filebeat_logstash"
+      "service_name" => "apache_httpd"
+    }
+  }
+}
+
+output {
+  elasticsearch {
+    hosts => ["http://elasticsearch:9200"]
+    index => "apache-filebeat-logstash-%{+YYYY.MM.dd}"
+  }
+
+  stdout {
+    codec => rubydebug
+  }
+}
+```
+
+Данная конфигурация выполняет следующие действия:
+
+1. принимает события от Filebeat на порту `5045`;
+2. обрабатывает строки access-лога Apache через шаблон `%{COMMONAPACHELOG}`;
+3. выделяет поля `clientip`, `timestamp`, `verb`, `request`, `httpversion`, `response`, `bytes`;
+4. добавляет служебные поля `log_source` и `service_name`;
+5. отправляет обработанные события в Elasticsearch.
+
+---
+
+### Конфигурация Filebeat для Apache
+
+Был создан файл конфигурации Filebeat:
+
+```bash
+nano filebeat/apache-filebeat.yml
+```
+
+Содержимое файла `filebeat/apache-filebeat.yml`:
+
+```yaml
+filebeat.inputs:
+  - type: log
+    enabled: true
+    paths:
+      - /var/log/apache/access.log
+    fields:
+      log_source: apache_filebeat
+      service_name: apache_httpd
+    fields_under_root: true
+
+output.logstash:
+  hosts: ["logstash-apache:5045"]
+
+logging.level: info
+```
+
+В данной конфигурации Filebeat считывает файл:
+
+```text
+/var/log/apache/access.log
+```
+
+После чтения события отправляются в Logstash:
+
+```text
+logstash-apache:5045
+```
+
+---
+
+### Запуск сервисов
+
+После подготовки конфигурационных файлов была выполнена команда запуска сервисов Apache, Logstash и Filebeat:
+
+```bash
+docker compose up -d apache logstash-apache filebeat-apache
+```
+
+В ходе первоначального запуска была выявлена ошибка монтирования файла `apache-filebeat.yml`. Ошибка была связана с тем, что Docker не смог смонтировать файл конфигурации Filebeat, так как указанный путь не соответствовал ожидаемому типу объекта.
+
+После проверки пути и создания файла `filebeat/apache-filebeat.yml` запуск был выполнен повторно.
+
+Скриншот — первоначальная ошибка запуска Filebeat:
+
+![[Pasted image 20260516124504.png]]
+Скриншот — повторный запуск сервисов после исправления конфигурации:
+
+![[Pasted image 20260516124915.png]]
+
+После этого была выполнена проверка запущенных контейнеров:
+
+```bash
+docker ps
+```
+
+На скриншоте видно, что контейнеры `apache`, `logstash-apache`, `filebeat-apache` и `elasticsearch` находятся в состоянии `Up`.
+
+Скриншот — проверка запущенных контейнеров:
+![[Pasted image 20260516124953.png]]
+
+
+---
+
+### Генерация тестовых запросов к Apache
+
+Для генерации записей в access-логе Apache были выполнены HTTP-запросы:
+
+```bash
+curl http://localhost:8081/
+curl http://localhost:8081/apache1
+curl http://localhost:8081/apache2
+curl http://localhost:8081/apache3
+```
+
+Запрос к главной странице `/` вернул стандартную страницу Apache `It works!`.
+
+Запросы `/apache1`, `/apache2`, `/apache3` вернули код `404 Not Found`, так как такие страницы не были созданы. При этом данные обращения также были корректно записаны в access-лог Apache.
+
+Скриншот — выполнение тестовых запросов к Apache:
+
+![[Pasted image 20260516125016.png]]
+
+---
+
+### Проверка access-лога Apache
+
+Была выполнена проверка файла access-лога Apache:
+
+```bash
+docker exec -it apache tail -n 10 /usr/local/apache2/logs/access.log
+```
+
+В результате были получены записи по выполненным HTTP-запросам:
+
+```text
+GET / HTTP/1.1
+GET /apache1 HTTP/1.1
+GET /apache2 HTTP/1.1
+GET /apache3 HTTP/1.1
+```
+
+На скриншоте видно, что Apache записал обращения в файл `/usr/local/apache2/logs/access.log`.
+
+Скриншот — проверка access-лога Apache:
+
+![[Pasted image 20260516125133.png]]
+
+---
+
+### Проверка работы Filebeat
+
+Была выполнена проверка логов контейнера `filebeat-apache`:
+
+```bash
+docker logs filebeat-apache --tail=100
+```
+
+В логах видно, что Filebeat загрузил конфигурацию, обнаружил файл `/var/log/apache/access.log`, запустил harvester и установил соединение с Logstash:
+
+```text
+Configured paths: [/var/log/apache/access.log]
+Harvester started for paths: [/var/log/apache/access.log]
+Connection to backoff(async(tcp://logstash-apache:5045)) established
+```
+
+Скриншот — проверка логов Filebeat:
+![[05-03-filebeat-apache-logs 1.png]]
+
+
+---
+
+### Проверка индекса в Elasticsearch
+
+Была выполнена проверка индексов Elasticsearch:
+
+```bash
+curl 'localhost:9200/_cat/indices?v' | grep apache
+```
+
+В результате был найден индекс:
+
+```text
+apache-filebeat-logstash-2026.05.16
+```
+
+В индексе было создано 4 документа, что соответствует четырём тестовым HTTP-запросам к Apache.
+
+Скриншот — проверка индекса Apache в Elasticsearch:
+![[Pasted image 20260516125515.png]]
+
+
+---
+
+### Просмотр логов Apache в Kibana
+
+В Kibana был создан новый index pattern:
+
+```text
+apache-filebeat-logstash-*
+```
+
+В качестве поля времени было выбрано:
+
+```text
+@timestamp
+```
+
+После создания index pattern был открыт раздел:
+
+```text
+Discover
+```
+
+В Discover был выбран index pattern:
+
+```text
+apache-filebeat-logstash-*
+```
+
+В интерфейсе Kibana отобразились события access-лога Apache, отправленные по цепочке Filebeat → Logstash → Elasticsearch.
+
+На скриншоте видно, что документы содержат разобранные Logstash поля:
+
+```text
+clientip
+verb
+request
+response
+bytes
+httpversion
+log_source
+service_name
+```
+
+Также видно, что лог относится к сервису:
+
+```text
+service_name: apache_httpd
+```
+
+Скриншот — логи Apache в Kibana, отправленные через Filebeat и Logstash:
+
+![[Pasted image 20260516125939.png]]
+
+---
+
+### Итог
+
+В рамках дополнительного задания была настроена доставка access-логов **Apache HTTP Server** в Elasticsearch через связку **Filebeat + Logstash**.
+
+Были выполнены следующие действия:
+
+1. был запущен контейнер Apache HTTP Server;
+2. была настроена запись access-лога Apache в файл `/usr/local/apache2/logs/access.log`;
+3. был настроен Filebeat для чтения файла `/var/log/apache/access.log`;
+4. была настроена отправка событий из Filebeat в Logstash;
+5. был настроен Logstash pipeline для разбора access-логов Apache через фильтр `grok`;
+6. обработанные события были отправлены в Elasticsearch в индекс `apache-filebeat-logstash-*`;
+7. в Kibana Discover были отображены события access-лога Apache с разобранными полями.
+
+Итог: поставка логов другого сервиса, не Nginx, была успешно настроена. В качестве приложения-источника использовался **Apache HTTP Server**.
+
+### Вывод
+
+В ходе выполнения работы был развёрнут стек ELK на сервере с Red OS 7 с использованием Docker Compose.
+
+Были выполнены следующие действия:
+
+1. Запущен Elasticsearch с нестандартным именем кластера `redos-random-cluster-2026`.
+2. Запущена Kibana и выполнен запрос `GET /_cluster/health?pretty` через Dev Tools.. Настроена доставка access-логов Nginx в Elasticsearch через Logstash.
+3. Настроена доставка access-логов Nginx в Elasticsearch через Filebeat.
+4. В Kibana созданы Data View для просмотра логов, отправленных через Logstash и Filebeat.
+
+
+
+
+
 
 ---
 
