@@ -1,0 +1,175 @@
+---
+- name: Install and configure RabbitMQ cluster
+  hosts: rabbitmq
+  become: true
+
+  vars:
+    rabbitmq_admin_user: admin
+    rabbitmq_admin_password: admin
+    rabbitmq_master_node: srv01
+    rabbitmq_master_erlang_name: rabbit@srv01
+
+  tasks:
+    - name: Set hostname
+      ansible.builtin.hostname:
+        name: "{{ inventory_hostname }}"
+
+    - name: Add RabbitMQ nodes to /etc/hosts
+      ansible.builtin.blockinfile:
+        path: /etc/hosts
+        marker: "# {mark} ANSIBLE RABBITMQ CLUSTER HOSTS"
+        block: |
+          192.168.56.11 srv01
+          192.168.56.12 srv02
+
+    - name: Install RabbitMQ package
+      ansible.builtin.package:
+        name:
+          - rabbitmq-server
+        state: present
+
+    - name: Enable and start RabbitMQ service
+      ansible.builtin.systemd:
+        name: rabbitmq-server
+        enabled: true
+        state: started
+
+    - name: Enable RabbitMQ management plugin
+      ansible.builtin.command:
+        cmd: rabbitmq-plugins enable rabbitmq_management
+      register: enable_management
+      changed_when: "'enabled' in enable_management.stdout or 'started' in enable_management.stdout"
+      failed_when: enable_management.rc not in [0]
+
+    - name: Restart RabbitMQ after enabling management plugin
+      ansible.builtin.systemd:
+        name: rabbitmq-server
+        state: restarted
+
+    - name: Open RabbitMQ ports in firewalld
+      ansible.posix.firewalld:
+        port: "{{ item }}"
+        permanent: true
+        state: enabled
+        immediate: true
+      loop:
+        - 4369/tcp
+        - 5672/tcp
+        - 15672/tcp
+        - 25672/tcp
+      ignore_errors: true
+
+- name: Synchronize Erlang cookie from master node
+  hosts: rabbitmq_master
+  become: true
+
+  tasks:
+    - name: Read Erlang cookie from master
+      ansible.builtin.slurp:
+        src: /var/lib/rabbitmq/.erlang.cookie
+      register: rabbitmq_cookie
+
+    - name: Save Erlang cookie as fact
+      ansible.builtin.set_fact:
+        master_erlang_cookie: "{{ rabbitmq_cookie.content }}"
+
+- name: Apply Erlang cookie to all nodes
+  hosts: rabbitmq
+  become: true
+
+  tasks:
+    - name: Stop RabbitMQ before changing cookie
+      ansible.builtin.systemd:
+        name: rabbitmq-server
+        state: stopped
+
+    - name: Copy Erlang cookie from master
+      ansible.builtin.copy:
+        content: "{{ hostvars['srv01']['master_erlang_cookie'] | b64decode }}"
+        dest: /var/lib/rabbitmq/.erlang.cookie
+        owner: rabbitmq
+        group: rabbitmq
+        mode: "0400"
+
+    - name: Start RabbitMQ after changing cookie
+      ansible.builtin.systemd:
+        name: rabbitmq-server
+        state: started
+
+- name: Join slave nodes to RabbitMQ cluster
+  hosts: rabbitmq_slaves
+  become: true
+
+  vars:
+    rabbitmq_master_erlang_name: rabbit@srv01
+
+  tasks:
+    - name: Check current cluster status
+      ansible.builtin.command:
+        cmd: rabbitmqctl cluster_status
+      register: cluster_status
+      changed_when: false
+
+    - name: Join node to RabbitMQ cluster
+      ansible.builtin.shell: |
+        rabbitmqctl stop_app
+        rabbitmqctl reset
+        rabbitmqctl join_cluster {{ rabbitmq_master_erlang_name }}
+        rabbitmqctl start_app
+      when: rabbitmq_master_erlang_name not in cluster_status.stdout
+
+- name: Configure RabbitMQ users and policies
+  hosts: rabbitmq_master
+  become: true
+
+  vars:
+    rabbitmq_admin_user: admin
+    rabbitmq_admin_password: admin
+
+  tasks:
+    - name: Add RabbitMQ admin user
+      ansible.builtin.command:
+        cmd: rabbitmqctl add_user {{ rabbitmq_admin_user }} {{ rabbitmq_admin_password }}
+      register: add_user_result
+      changed_when: add_user_result.rc == 0
+      failed_when: add_user_result.rc not in [0, 70]
+
+    - name: Set administrator tag for admin user
+      ansible.builtin.command:
+        cmd: rabbitmqctl set_user_tags {{ rabbitmq_admin_user }} administrator
+      changed_when: true
+
+    - name: Set permissions for admin user
+      ansible.builtin.command:
+        cmd: rabbitmqctl set_permissions -p / {{ rabbitmq_admin_user }} ".*" ".*" ".*"
+      changed_when: true
+
+    - name: Set default queue type to quorum for vhost /
+      ansible.builtin.command:
+        cmd: rabbitmqctl update_vhost_metadata "/" --default-queue-type quorum
+      changed_when: true
+
+    - name: Create RabbitMQ 4.x compatible ha-all policy for quorum queues
+      ansible.builtin.command:
+        cmd: rabbitmqctl set_policy ha-all "^" '{"delivery-limit":50}' --priority 0 --apply-to quorum_queues
+      changed_when: true
+
+    - name: Show policies
+      ansible.builtin.command:
+        cmd: rabbitmqctl list_policies
+      register: rabbitmq_policies
+      changed_when: false
+
+    - name: Print policies
+      ansible.builtin.debug:
+        var: rabbitmq_policies.stdout_lines
+
+    - name: Show cluster status
+      ansible.builtin.command:
+        cmd: rabbitmqctl cluster_status
+      register: rabbitmq_cluster_status
+      changed_when: false
+
+    - name: Print cluster status
+      ansible.builtin.debug:
+        var: rabbitmq_cluster_status.stdout_lines
