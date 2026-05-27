@@ -1,6 +1,3 @@
-<img width="1248" height="624" alt="task2_05_create_database" src="https://github.com/user-attachments/assets/4a62407f-2aad-41cc-9655-0b148505c3c7" /># Домашнее задание к занятию «Базы данных» - Выполнил: Михаил Зиновьев
-
----
 
 ### Легенда
 
